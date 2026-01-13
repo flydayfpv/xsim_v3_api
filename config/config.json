@@ -1,0 +1,26 @@
+{
+  "development": {
+    "username": "root",
+    "password": "tock2tock",
+    "database": "xsim3_dev",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "logging": true
+  },
+  "test": {
+    "username": "root",
+    "password": "tock2tock",
+    "database": "xsim3_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "logging": false
+  },
+  "production": {
+    "username": "root",
+    "password": "tock2tock",
+    "database": "xsim3",
+    "host": "127.0.0.1",
+    "dialect": "mysql",
+    "logging": false
+  }
+}
