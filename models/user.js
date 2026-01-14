@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   user.init({
     emid: DataTypes.INTEGER,
-    citizenid: DataTypes.INTEGER,
+    citizenid: DataTypes.BIGINT,
     password: DataTypes.STRING,
     prefixID: DataTypes.INTEGER,
     fname: DataTypes.STRING,
@@ -31,6 +31,6 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'user',
-  });
+  }); 
   return user;
 };
