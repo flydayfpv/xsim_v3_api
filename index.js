@@ -4,7 +4,7 @@ const bodyParser = require("body-parser");
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const app = express();
-const PORT = 3020;
+const PORT = 3015;
 
 // ให้ req.ip ถูกต้อง
 app.set('trust proxy', true);
