@@ -9,6 +9,10 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
+      name: { // Added missing colon
+        type: Sequelize.STRING,
+        allowNull: false
+      },
       top: {
         type: Sequelize.STRING
       },
@@ -18,19 +22,28 @@ module.exports = {
       realImage: {
         type: Sequelize.STRING
       },
-      itemCategoryId: {
-        type: Sequelize.INTEGER
+      itemCategoryID: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'itemCategories', // Make sure this table name matches your Categories migration
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
       },
       description: {
-        type: Sequelize.STRING
+        type: Sequelize.TEXT // Changed to TEXT to allow for longer technical descriptions
       },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.fn('now')
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.fn('now')
       }
     });
   },
