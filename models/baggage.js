@@ -1,27 +1,60 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class baggage extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      baggage.belongsTo(models.itemImage, {
+        foreignKey: 'itemImageID',
+        as: 'item'
+      });
+
+      baggage.belongsTo(models.area, {
+        foreignKey: 'areaID',
+        as: 'location'
+      });
+      baggage.belongsTo(models.itemCategory, {
+        foreignKey: 'itemCategoryID',
+        as: 'category'
+      });
     }
   }
-  baggage.init({
-    top: DataTypes.STRING,
-    side: DataTypes.STRING,
-    areaID: DataTypes.INTEGER,
-    itemImageID: DataTypes.INTEGER,
-    itemPos: DataTypes.JSON
-  }, {
-    sequelize,
-    modelName: 'baggage',
-  });
+
+baggage.init({
+  top: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  side: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  code: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  itemPos: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+  areaID: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  itemImageID: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  itemCategoryID: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  }
+}, {
+  sequelize,
+  modelName: 'baggage',
+  tableName: 'baggages'
+});
+
+
   return baggage;
 };

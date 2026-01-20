@@ -12,10 +12,13 @@ module.exports = {
      *   isBetaMember: false
      * }], {});
     */
-    await queryInterface.bulkInsert('itemcategories', [
+    await queryInterface.bulkInsert('itemCategories', [
       { name: 'Clear', createdAt: new Date(), updatedAt: new Date() },
       { name: 'IED', createdAt: new Date(), updatedAt: new Date() },
       { name: 'Explosive', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'Gun / Parts and Ammunition', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'Sharp Object', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'Other', createdAt: new Date(), updatedAt: new Date() },
       
     ], {}); 
 
