@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'areaID',
         as: 'location'
       });
+
       baggage.belongsTo(models.itemCategory, {
         foreignKey: 'itemCategoryID',
         as: 'category'
@@ -20,41 +21,49 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
 
-baggage.init({
-  top: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  side: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  code: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  itemPos: {
-    type: DataTypes.JSON,
-    allowNull: true
-  },
-  areaID: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  itemImageID: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  itemCategoryID: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  }
-}, {
-  sequelize,
-  modelName: 'baggage',
-  tableName: 'baggages'
-});
-
+  baggage.init(
+    {
+      top: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      side: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      areaID: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+      },
+      itemImageID: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+      },
+      itemPos: {
+        type: DataTypes.JSON, // DB เป็น LONGTEXT แต่ Sequelize ใช้ JSON ได้
+        allowNull: true
+      },
+      code: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      itemCategoryID: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      examType: {
+        type: DataTypes.ENUM('CBT', 'CBA'),
+        allowNull: false,
+        defaultValue: 'CBT'
+      }
+    },
+    {
+      sequelize,
+      modelName: 'baggage',
+      tableName: 'baggages',
+      timestamps: true
+    }
+  );
 
   return baggage;
 };
