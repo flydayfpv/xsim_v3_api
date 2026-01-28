@@ -1,6 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const { training_sessions } = require('../models');
+const { Op, fn, col, where } = require('sequelize');
+
+
+router.get('/years/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const years = await training_sessions.findAll({
+            attributes: [[fn('DISTINCT', fn('YEAR', col('createdAt'))), 'year']],
+            where: { userId },
+            order: [[fn('YEAR', col('createdAt')), 'DESC']],
+            raw: true
+        });
+        const yearList = years.map(item => item.year).filter(y => y !== null);
+        if (yearList.length === 0) yearList.push(new Date().getFullYear());
+        res.json({ success: true, years: yearList });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 
 // ---------------------------------------------------------
 // 1. POST: Save Training Session
@@ -40,42 +60,79 @@ router.post('/save', async (req, res) => {
 router.get('/stats/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
+        const { year } = req.query;
+
+        const filter = { userId };
+
+        if (year) {
+            // ✅ Change col('created_at') to col('createdAt')
+            filter[Op.and] = [
+                where(fn('YEAR', col('createdAt')), year)
+            ];
+        }
+
         const sessions = await training_sessions.findAll({ 
-            where: { userId },
-            order: [['created_at', 'DESC']] 
+            where: filter,
+            // ✅ Change 'created_at' to 'createdAt'
+            order: [['createdAt', 'DESC']] 
         });
 
-        // Logic การคำนวณค่าเฉลี่ยจาก JSON Data
-        const aggregate = {};
+        if (sessions.length === 0) {
+            return res.json({ success: true, totalSessions: 0, data: [] });
+        }
 
-        sessions.forEach(s => {
-            const stats = s.category_stats; // ดึงมาเป็น Object อัตโนมัติด้วย Getter
-            Object.keys(stats).forEach(catId => {
-                if (!aggregate[catId]) {
-                    aggregate[catId] = { hits: 0, total: 0, categoryId: catId };
-                }
-                aggregate[catId].hits += stats[catId].hits;
-                aggregate[catId].total += stats[catId].total;
-            });
+        // ... rest of your logic
+        res.json({ success: true, data: sessions });
+
+    } catch (error) {
+        console.error("DB Error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ---------------------------------------------------------
+// 3. GET: Get Available Years for a User
+// ใช้สำหรับดึงรายการปีทั้งหมดที่ User เคยทดสอบ เพื่อทำ Dropdown Filter
+// ---------------------------------------------------------
+// Backend: trainingController.js
+router.get('/stats-daily/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { year } = req.query;
+
+        const dailyStats = await training_sessions.findAll({
+            attributes: [
+                [fn('DATE', col('createdAt')), 'date'],
+                [fn('COUNT', col('id')), 'sessionCount'],
+                // ✅ ผลรวมของเวลาที่ใช้ทั้งหมดในวันนั้น
+                [fn('SUM', col('time_used')), 'totalTime'], 
+                // ✅ ค่าเฉลี่ยของความแม่นยำ
+                [fn('AVG', col('hitsRate')), 'avgHitsRate'],
+                // ✅ ค่าเฉลี่ยของ Hits ต่อรอบ
+                [fn('AVG', col('hits')), 'avgHits'],
+                // ✅ ค่าเฉลี่ยของคะแนนต่อรอบ
+                [fn('AVG', col('score')), 'avgScore']
+            ],
+            where: {
+                userId,
+                [Op.and]: [where(fn('YEAR', col('createdAt')), year || 2026)]
+            },
+            group: [fn('DATE', col('createdAt'))],
+            order: [[fn('DATE', col('createdAt')), 'DESC']],
+            raw: true
         });
 
-        // แปลงเป็น Array เพื่อให้ Frontend (เช่น Chart.js) ใช้งานได้ทันที
-        const report = Object.keys(aggregate).map(id => ({
-            categoryId: id,
-            // คำนวณ % ความแม่นยำเฉลี่ยของหัวข้อนี้
-            accuracy: aggregate[id].total > 0 
-                ? ((aggregate[id].hits / aggregate[id].total) * 100).toFixed(2) 
-                : 0
-        }));
-
-        res.json({
-            success: true,
-            totalSessions: sessions.length,
-            data: report
-        });
+        res.json({ success: true, data: dailyStats });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+// ---------------------------------------------------------
+// 4. GET: Get Stats Grouped by Date
+// ดึงข้อมูลสรุปรายวัน เพื่อทำกราฟเส้นหรือตารางสรุปรายวัน
+// ---------------------------------------------------------
+// ---------------------------------------------------------
+// 4. GET: Get Stats Grouped by Date (FIXED)
+// ---------------------------------------------------------
 
 module.exports = router;
