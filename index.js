@@ -49,18 +49,21 @@ const itemCategory = require("./routes/itemCategory");
 const itemImage = require("./routes/itemimage");
 const area = require("./routes/area")
 const baggage = require("./routes/baggage")
+const cbt = require("./routes/cbt")
 
 app.use("/auth", authRouter);
 app.use("/itemCategory", itemCategory);
 app.use("/itemImage", itemImage); // Suggest using /api prefix for consistency
 app.use("/area", area); // Suggest using /api prefix for consistency
 app.use("/baggage", baggage); // Suggest using /api prefix for consistency
+app.use("/cbt",cbt)
+app.use("/training", require("./routes/training")); // Training routes
 
 
 
-// --------------------
+// -------------------- 
 // 6. Start Server
 // --------------------
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-});
+}); 

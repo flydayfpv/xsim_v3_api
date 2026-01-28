@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
-const { baggage } = require("../models");
+const { baggage,itemImage } = require("../models");
 const { Op } = require('sequelize');
 
 /* ---------------- MULTER CONFIG ---------------- */
@@ -15,24 +15,59 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+
+
 /* =================================================
-    Next Code Logic (Query by areaID & itemImageID)
+    FIND ALL BY AREA & CATEGORY
+    URL: /baggages/filter?areaID=1&itemCategoryID=2
+================================================= */
+router.get('/filter', async (req, res) => {
+    const { areaID, itemCategoryID } = req.query;
+ 
+    try {
+        // ตรวจสอบเงื่อนไขการค้นหา
+        const whereCondition = {};
+        if (areaID) whereCondition.areaID = parseInt(areaID);
+        if (itemCategoryID) whereCondition.itemCategoryID = parseInt(itemCategoryID);
+
+        const data = await baggage.findAll({
+            where: whereCondition,
+            include: [{
+                // ดึงข้อมูลภาพไอเทมดิบและภาพจริงมาจาก itemImage
+                model: require('../models').itemImage, 
+                as: 'item', 
+                attributes: ['name', 'top', 'side', 'realImage', 'description']
+            }],
+            order: [['id', 'DESC']] // เอาภาพใหม่ขึ้นก่อน
+        });
+
+        res.json(data);
+    } catch (err) {
+        console.error("Filter Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+/* =================================================
+    Next Code Logic (Query by areaID & itemCategoryID)
 ================================================= */
 router.get('/nextCode', async (req, res) => {
-    const { areaID, itemImageID } = req.query;
+    // เปลี่ยนจากรับ itemImageID เป็น itemCategoryID
+    const { areaID, itemCategoryID } = req.query;
 
     try {
         const lastRecord = await baggage.findOne({
             where: {
                 areaID: parseInt(areaID),
-                itemImageID: parseInt(itemImageID)
+                itemCategoryID: parseInt(itemCategoryID) // ค้นหาตามหมวดหมู่
             },
             order: [['id', 'DESC']]
         });
 
         let nextNumber = 1;
         if (lastRecord && lastRecord.code) {
-            // Extracts last 5 digits from "2026-...-T00005"
+            // ดึงเลข 5 หลักสุดท้าย เช่น "00005" จาก "2026-...-T00005"
             const lastFive = lastRecord.code.slice(-5);
             const parsed = parseInt(lastFive, 10);
             if (!isNaN(parsed)) nextNumber = parsed + 1;
@@ -43,6 +78,7 @@ router.get('/nextCode', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 /* =================================================
     CREATE (Canvas Upload)
@@ -56,12 +92,17 @@ router.post("/canvas-upload", upload.fields([
             return res.status(400).json({ error: "Images required" });
         }
 
+        // ✨ FIX: Convert empty string to null for the database
+        const itemImageID = req.body.itemImageID === "" || req.body.itemImageID === "null" 
+            ? null 
+            : parseInt(req.body.itemImageID);
+
         const record = await baggage.create({
             top: `/uploads/baggage/${req.files.top[0].filename}`,
             side: `/uploads/baggage/${req.files.side[0].filename}`,
-            areaID: req.body.areaID,
-            itemImageID: req.body.itemImageID,
-            itemCategoryID: req.body.itemCategoryID,
+            areaID: parseInt(req.body.areaID),
+            itemImageID: itemImageID, // Will be null if it's a "Clear" category
+            itemCategoryID: parseInt(req.body.itemCategoryID),
             examType: req.body.examType,
             code: req.body.code,
             itemPos: JSON.parse(req.body.itemPos || "{}")
@@ -69,17 +110,28 @@ router.post("/canvas-upload", upload.fields([
 
         res.json({ success: true, data: record });
     } catch (err) {
+        console.error("Upload Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
 /* =================================================
-    READ ONE (Must be BELOW nextCode)
+    READ ONE (Included Item Data)
 ================================================= */
 router.get("/:id", async (req, res) => {
     try {
-        const data = await baggage.findByPk(req.params.id);
+        const data = await baggage.findByPk(req.params.id, {
+            // ดึงข้อมูลจาก Model item ที่มีความสัมพันธ์กันมาด้วย
+            include: [{
+                // ดึงข้อมูลภาพไอเทมดิบและภาพจริงมาจาก itemImage
+                model: require('../models').itemImage, 
+                as: 'item', 
+                attributes: ['name', 'top', 'side', 'realImage', 'description']
+            }],
+        });
+
         if (!data) return res.status(404).json({ error: "Not found" });
+        
         res.json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
