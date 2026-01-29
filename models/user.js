@@ -16,6 +16,7 @@ module.exports = (sequelize, DataTypes) => {
       user.belongsTo(models.department, { foreignKey: 'departmentID' });
       user.belongsTo(models.role, { foreignKey: 'roleID' });
       user.hasMany(models.training_sessions, { foreignKey: 'userId' } );
+      user.hasMany(models.corrective, { foreignKey: 'userId' } );
       
     }
   }

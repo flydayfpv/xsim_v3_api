@@ -1,23 +1,27 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class correctiveType extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      // One Type can have many Corrective records
+      this.hasMany(models.corrective, { 
+        foreignKey: 'correctiveTypeId',
+        as: 'correctives'
+      });
     }
   }
+
   correctiveType.init({
-    name: DataTypes.STRING
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false
+    }
   }, {
     sequelize,
     modelName: 'correctiveType',
+    tableName: 'correctiveTypes', // THIS FIXES YOUR ERROR
   });
+
   return correctiveType;
 };

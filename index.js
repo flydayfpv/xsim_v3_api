@@ -58,6 +58,8 @@ app.use("/area", area); // Suggest using /api prefix for consistency
 app.use("/baggage", baggage); // Suggest using /api prefix for consistency
 app.use("/cbt",cbt)
 app.use("/training", require("./routes/training")); // Training routes
+app.use("/corrective", require("./routes/corrective")); // Corrective routes
+app.use("/users", require("./routes/user")); // User routes
 
 
 
