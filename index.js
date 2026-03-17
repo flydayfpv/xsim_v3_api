@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const app = express();
-const PORT = process.env.PORT || 3015;
+const PORT = process.env.PORT || 3131;
 
 // --------------------
 // 1. CORS Configuration
@@ -60,9 +60,12 @@ app.use("/cbt",cbt)
 app.use("/training", require("./routes/training")); // Training routes
 app.use("/corrective", require("./routes/corrective")); // Corrective routes
 app.use("/users", require("./routes/user")); // User routes
-
-
-
+app.use("/correctivelog", require("./routes/correctivelog")); // Corrective Log routes
+app.use("/appuse", require("./routes/appuse")); // App Use routes
+app.use("/usercookies", require("./routes/UserCookies")); // User Cookies routes
+app.use("/pagecomponents", require("./routes/pageComponents")); // Page Components routes
+app.use("/client", require("./routes/client")); // Client routes
+app.use("/menu", require("./routes/menu")); // Menu routes
 // -------------------- 
 // 6. Start Server
 // --------------------

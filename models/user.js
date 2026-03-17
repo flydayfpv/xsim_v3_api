@@ -1,27 +1,26 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class user extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      // define association here
+      // Associations เดิม
       user.belongsTo(models.prefix, { foreignKey: 'prefixID' });
       user.belongsTo(models.division, { foreignKey: 'divisionID' });
       user.belongsTo(models.department, { foreignKey: 'departmentID' });
       user.belongsTo(models.role, { foreignKey: 'roleID' });
-      user.hasMany(models.training_sessions, { foreignKey: 'userId' } );
-      user.hasMany(models.corrective, { foreignKey: 'userId' } );
-      
+      user.hasMany(models.training_sessions, { foreignKey: 'userId' });
+      user.hasMany(models.corrective, { foreignKey: 'userId' });
+
+      // --- เพิ่มการเชื่อมโยงกับ LoginHistory ---
+      user.hasMany(models.LoginHistory, { 
+        foreignKey: 'userId',
+        as: 'loginHistories' // ตั้งชื่อ Alias สำหรับเรียกใช้
+      });
     }
   }
   user.init({
-    emid: DataTypes.INTEGER,
+    emid: DataTypes.INTEGER, // หรือจะใช้ emid เป็นตัวเชื่อมโยงหลักก็ได้
     citizenid: DataTypes.BIGINT,
     password: DataTypes.STRING,
     prefixID: DataTypes.INTEGER,
@@ -34,6 +33,6 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'user',
-  }); 
+  });
   return user;
 };

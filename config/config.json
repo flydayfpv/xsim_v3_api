@@ -10,7 +10,7 @@
   "test": {
     "username": "xsim3",
     "password": "tock2tock",
-    "database": "xsim3_test",
+    "database": "xsim3_test", 
     "host": "127.0.0.1",
     "dialect": "mysql",
     "logging": false

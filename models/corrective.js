@@ -37,13 +37,16 @@ module.exports = (sequelize, DataTypes) => {
     timeTarget: DataTypes.INTEGER,
     remark: DataTypes.STRING,
     areaId: DataTypes.INTEGER,
-    timeGet: DataTypes.INTEGER
+    timeGet: { 
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    }
     
   }, {
     sequelize,
     modelName: 'corrective',
     tableName: 'correctives', // Explicit plural name
   });
-
+ 
   return corrective;
 };

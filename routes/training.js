@@ -35,15 +35,15 @@ router.post('/save', async (req, res) => {
         } = req.body;
 
         const session = await training_sessions.create({
-            userId: userId, // บันทึก ID ผู้ใช้ที่ส่งมา
+            userId: userId,
             score: score,
             hits: hits,
             fars: fars,
             hitsRate: efficiency,
             time_used: timeUsed,
-            // บังคับแปลงเป็น String เพื่อป้องกัน Error "cannot be an array or object"
-            category_stats: JSON.stringify(categoryStats), 
-            wrong_answers: JSON.stringify(wrongAnswers)
+            // ตรวจสอบ: ถ้าเป็น String อยู่แล้วให้ส่งเลย ถ้าเป็น Object ค่อย Stringify
+            category_stats: typeof categoryStats === 'string' ? categoryStats : JSON.stringify(categoryStats), 
+            wrong_answers: typeof wrongAnswers === 'string' ? wrongAnswers : JSON.stringify(wrongAnswers)
         });
 
         res.status(201).json({ success: true, sessionId: session.id });
@@ -51,8 +51,7 @@ router.post('/save', async (req, res) => {
         console.error("DB Save Error:", error);
         res.status(500).json({ success: false, error: error.message });
     }
-});+
-
+});
 // ---------------------------------------------------------
 // 2. GET: Category Average Analytics
 // ใช้สำหรับดึงข้อมูลไปทำกราฟ Radar Chart หรือดูจุดอ่อนแยกหัวข้อ
