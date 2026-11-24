@@ -1,162 +1,132 @@
 'use strict';
 const express = require('express');
 const router = express.Router();
-const { user, session, prefix, division, department, role } = require('../models');
+const { user, session, prefix, division, role } = require('../models');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt'); // นำเข้า bcrypt สำหรับการ Hash
+const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
-const { authSession } = require('../middleware');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key';
-const SALT_ROUNDS = 12; // กำหนดตามที่คุณต้องการ (12 rounds)
+const JWT_SECRET = process.env.JWT_SECRET 
+const SALT_ROUNDS = 12;
 
-/* ==================================
-    1. GET USER PROFILE (By ID)
-   ================================== */
-router.get('/users/:id', async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const foundUser = await user.findByPk(userId, {
-      attributes: ['fname', 'lname', 'id', 'emid'],
-      include: [
-        { model: prefix, attributes: ['name'] },
-        { model: division, attributes: ['name'] }
-      ]
-    });
+// --- 1. Multer Setup (เหมือนเดิม) ---
+const uploadDir = 'uploads/profiles/';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
-    if (!foundUser) return res.status(404).json({ message: 'User not found' });
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir),
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, `face-${uniqueSuffix}${path.extname(file.originalname)}`);
+    }
+});
 
-    res.json({
-      id: foundUser.id,
-      emid: foundUser.emid,
-      prefix: foundUser.prefix?.name || '',
-      firstName: foundUser.fname,
-      lastName: foundUser.lname,
-      division: foundUser.division?.name || ''
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Fetch user failed', error: err.message });
-  }
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
 /* ==================================
-    2. LOGIN (With Session Control)
+    API: UPLOAD FACE
+   ================================== */
+router.post('/upload-face', upload.single('face_image'), async (req, res) => {
+    try {
+        const { userID } = req.body;
+        if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+        if (!userID) {
+            fs.unlinkSync(req.file.path);
+            return res.status(400).json({ message: 'Missing userID' });
+        }
+
+        const webPath = req.file.path.replace(/\\/g, "/");
+        await user.update({ face_img: webPath }, { where: { id: userID } });
+
+        res.json({ message: 'Upload success', path: webPath });
+    } catch (err) {
+        if (req.file) fs.unlinkSync(req.file.path);
+        res.status(500).json({ message: 'Upload failed', error: err.message });
+    }
+});
+
+/* ==================================
+    API: LOGIN (FIXED BASED ON IMAGE)
    ================================== */
 router.post('/login', async (req, res) => {
-  try {
-    const { login, password } = req.body;
+    try {
+        const { login, password } = req.body;
 
-    const foundUser = await user.findOne({
-      where: {
-        [Op.or]: [{ emid: login }, { citizenid: login }]
-      }
-    });
+        // แก้ไข: เปลี่ยนจาก citizenid เป็น idcard ตามรูปใน DB ของคุณ
+        const foundUser = await user.findOne({
+            where: { 
+                [Op.or]: [
+                    { emid: login }, 
+                    { idcard: login } // แก้จุดนี้
+                ] 
+            },
+            include: [
+                { model: prefix, attributes: ['name'] }, // ดึงคำนำหน้า
+                { model: division, attributes: ['name'] }, // ดึงแผนก
+                { model: role, attributes: ['name'] } // ดึงสิทธิ์
+            ]
+        });
 
-    if (!foundUser) {
-      return res.status(401).json({ message: 'User not found' });
+        // Debug: ดูว่าหา User เจอไหม
+        if (!foundUser) {
+            console.log(`User Not Found: ${login}`);
+            return res.status(401).json({ message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+        }
+
+        // ตรวจสอบรหัสผ่านด้วย Bcrypt
+        const isMatch = await bcrypt.compare(password, foundUser.password);
+        
+        if (!isMatch) {
+            console.log(`Password Mismatch for: ${login}`);
+            return res.status(401).json({ message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+        }
+
+        // ลบ Session เก่า (Single Login Policy)
+        await session.destroy({ where: { userID: foundUser.id } });
+
+        // สร้าง Tokens
+        const accessToken = jwt.sign(
+            { userID: foundUser.id, roleID: foundUser.roleID }, 
+            JWT_SECRET, 
+            { expiresIn: '1h' }
+        );
+        const refreshToken = jwt.sign(
+            { userID: foundUser.id }, 
+            JWT_SECRET, 
+            { expiresIn: '7d' }
+        );
+
+        // บันทึก Session ใหม่
+        await session.create({
+            userID: foundUser.id,
+            refresh_token: refreshToken,
+            ip_address: req.ip,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        });
+
+        // ส่งข้อมูลกลับ (ห้ามส่ง Password กลับไป)
+        const userResponse = foundUser.toJSON();
+        delete userResponse.password;
+
+        res.json({ 
+            message: 'Login success', 
+            accessToken, 
+            refreshToken, 
+            user: userResponse 
+        });
+
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.status(500).json({ message: 'Server error', error: err.message });
     }
-
-    // 🔐 ตรวจสอบรหัสผ่าน (bcrypt.compare จะเช็คกับ hash ใน DB เอง)
-    const isMatch = await bcrypt.compare(password, foundUser.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid password' });
-    }
-
-    // 🔥 ลบ session เก่าทิ้ง (Concurrency control)
-    await session.destroy({ where: { userID: foundUser.id } });
-
-    const accessToken = jwt.sign(
-      { userID: foundUser.id, roleID: foundUser.roleID },
-      JWT_SECRET,
-      { expiresIn: '30m' }
-    );
-
-    const refreshToken = jwt.sign(
-      { userID: foundUser.id },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    await session.create({
-      userID: foundUser.id,
-      refresh_token: refreshToken,
-      device_id: req.headers['x-device-id'] || null,
-      ip_address: req.ip,
-      user_agent: req.headers['user-agent'],
-      last_active_at: new Date(),
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    });
-
-    res.json({
-      message: 'Login success',
-      accessToken,
-      refreshToken,
-      user: {
-        id: foundUser.id,
-        fname: foundUser.fname,
-        lname: foundUser.lname,
-        roleID: foundUser.roleID,
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Login error', error: err.message });
-  }
-});
-
-/* ==================================
-    3. CREATE USER (With Hashing)
-   ================================== */
-router.post('/users', async (req, res) => {
-  try {
-    const userData = { ...req.body };
-    
-    // Hash password ก่อนบันทึกถ้ามีส่งมา
-    if (userData.password) {
-      userData.password = await bcrypt.hash(userData.password, SALT_ROUNDS);
-    }
-
-    const newUser = await user.create(userData);
-    res.status(201).json(newUser);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-/* ==================================
-    4. UPDATE USER (With Hashing)
-   ================================== */
-router.put('/users/:id', async (req, res) => {
-  try {
-    const updateData = { ...req.body };
-
-    // 🔐 ถ้ามีการส่ง password ใหม่มา (เช่น จากหน้า Change Password Modal)
-    if (updateData.password) {
-      updateData.password = await bcrypt.hash(updateData.password, SALT_ROUNDS);
-    }
-
-    const [updated] = await user.update(updateData, {
-      where: { id: req.params.id }
-    });
-
-    if (!updated) return res.status(404).json({ message: 'User not found' });
-    
-    res.json({ message: 'User updated successfully' });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-/* ==================================
-    5. LOGOUT
-   ================================== */
-router.post('/logout', authSession, async (req, res) => {
-  try {
-    // ลบ session ออกจาก DB ผ่าน middleware req.session
-    await req.session.destroy();
-    res.json({ message: 'Logout success' });
-  } catch (err) {
-    res.status(500).json({ message: 'Logout failed' });
-  }
 });
 
 module.exports = router;

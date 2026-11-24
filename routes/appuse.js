@@ -53,7 +53,7 @@ router.post('/login', upload.single('image'), async (req, res) => {
           order: [['loginAt', 'DESC']]
         });
 
-        // ถ้าไม่ใช่เครื่องเดิม (HWID ไม่ตรง) ให้บล็อก
+   //     ถ้าไม่ใช่เครื่องเดิม (HWID ไม่ตรง) ให้บล็อก
         if (lastHistory && lastHistory.hwid !== hwid) {
           const timeLeft = Math.ceil(30 - diffInMinutes);
           return res.status(403).json({ 

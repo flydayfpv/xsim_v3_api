@@ -243,7 +243,7 @@ router.get('/dashboardinfo/:id', async (req, res) => {
             lastLoginAt: lastLogin ? lastLogin.loginAt : null,
             // รวม Path รูปภาพให้เรียบร้อย
             imageUrl: lastLogin?.imagePath 
-                ? `http://61.7.159.216:9000/xsim3_api/${lastLogin.imagePath}` 
+                ? `http://1.10.131.110:9000/xsim3_api/${lastLogin.imagePath}` 
                 : null
         };
 

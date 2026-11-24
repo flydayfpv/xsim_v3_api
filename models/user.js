@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   user.init({
     emid: DataTypes.INTEGER, // หรือจะใช้ emid เป็นตัวเชื่อมโยงหลักก็ได้
-    citizenid: DataTypes.BIGINT,
+    idcard: DataTypes.BIGINT,
     password: DataTypes.STRING,
     prefixID: DataTypes.INTEGER,
     fname: DataTypes.STRING,
@@ -33,6 +33,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'user',
+    tableName: 'users',
   });
   return user;
 };

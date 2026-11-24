@@ -10,11 +10,12 @@ const PORT = process.env.PORT || 3131;
 // --------------------
 // 1. CORS Configuration
 // --------------------
-// It is better to place CORS at the very top
 app.use(cors({
+  // The origin must include the protocol (http://)
   origin: "*", 
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true // Optional: Add this if you plan to use cookies/sessions
 }));
 
 // --------------------
